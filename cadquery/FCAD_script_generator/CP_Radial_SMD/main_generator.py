@@ -50,6 +50,9 @@ __Comment__ = 'make SMD Radial Capacitors 3D models exported to STEP and VRML fo
 
 ___ver___ = "1.3.2 10/02/2017"
 
+save_memory = True #reducing memory consuming for all generation params
+check_Model = False
+
 # thanks to Frank Severinsen Shack for including vrml materials
 
 # maui import cadquery as cq
@@ -60,7 +63,7 @@ from collections import namedtuple
 import sys, os
 import datetime
 from datetime import datetime
-sys.path.append("../_tools")
+sys.path.append(".." + os.sep + "_tools")
 import exportPartToVRML as expVRML
 import shaderColors
 
@@ -78,10 +81,8 @@ mark_color = shaderColors.named_colors[mark_color_key].getDiffuseFloat()
 import FreeCAD, Draft, FreeCADGui
 import ImportGui
 import FreeCADGui as Gui
-from Gui.Command import *
 
-
-outdir=os.path.dirname(os.path.realpath(__file__)+"/../_3Dmodels")
+outdir=os.path.dirname(os.path.realpath(__file__)+os.sep+".."+os.sep+"_3Dmodels")
 scriptdir=os.path.dirname(os.path.realpath(__file__))
 sys.path.append(outdir)
 sys.path.append(scriptdir)
@@ -108,31 +109,31 @@ from cq_cad_tools import FuseObjs_wColors, GetListOfObjects, restore_Main_Tools,
  exportSTEP, close_CQ_Example, exportVRML, saveFCdoc, z_RotateObject, Color_Objects, \
  CutObjs_wColors, checkRequirements
 
+# CQ checking
 try:
-    # Gui.SendMsgToActiveView("Run")
-    Gui.activateWorkbench("CadQueryWorkbench")
+    FreeCADGui.activateWorkbench("CadQueryWorkbench")
     import cadquery as cq
     from Helpers import show
-    # CadQuery Gui
-except: # catch *all* exceptions
-    msg="missing CadQuery 0.3.0 or later Module!\r\n\r\n"
-    msg+="https://github.com/jmwright/cadquery-freecad-module/wiki\n"
-    reply = QtGui.QMessageBox.information(None,"Info ...",msg)
-    # maui end
-
-#checking requirements
-checkRequirements(cq)
-
+except Exception as e: # catch *all* exceptions
+    FreeCAD.Console.PrintMessage(e);FreeCAD.Console.PrintMessage('\n')
+    msg = "missing CadQuery 0.3.0 or later Module!\r\n\r\n"
+    msg += "https://github.com/jmwright/cadquery-freecad-module/wiki\n"
+    if QtGui is not None:
+        reply = QtGui.QMessageBox.information(None,"Info ...",msg)
 try:
-    close_CQ_Example(App, Gui)
-except: # catch *all* exceptions
-    print "CQ 030 doesn't open example file"
+    close_CQ_Example(FreeCAD, FreeCADGui)
+except:
+    FreeCAD.Console.PrintMessage("can't close example.")
+##
 
 import cq_parameters  # modules parameters
 from cq_parameters import *
 
 all_params = kicad_naming_params_radial_smd_cap
 # all_params = all_params_radial_smd_cap
+
+
+color_pin_mark=True
 
 def make_radial_smd(params):
 
@@ -142,12 +143,16 @@ def make_radial_smd(params):
     H = params.H    # max width (x) with pins
     P = params.P    # distance between pins
     W = params.W    # pin width
+    PM = params.PM  # hide pin marker
 
+    if not color_pin_mark:
+        PM=False
+        
     c = 0.15  # pin thickness
 
-    bh = 1.0 # belt start height
-    br = 0.2 # belt radius
-    bf = 0.1 # belt fillet
+    bh = L/6 # belt start height
+    br = min(D, L)/20. # belt radius
+    bf = br/10 # belt fillet
 
     D2 = A+0.1  # cut diameter
 
@@ -156,12 +161,11 @@ def make_radial_smd(params):
     h3 = 0.7 # bottom plastic height, anode side
 
     cf = 0.4  # cathode side corner fillet
-    ac = A/5. # anode side chamfer
+    ac = min(1, A/4) # anode side chamfer
 
-    ef = 0.2 # fillet of the top and bottom edges of the metallic body
+    ef = D/15 # fillet of the top and bottom edges of the metallic body
 
     rot = params.rotation
-    dest_dir_pref = params.dest_dir_prefix
 
     cimw = D/2.*0.7 # cathode identification mark width
 
@@ -219,14 +223,16 @@ def make_radial_smd(params):
 
     pins = pins.union(pins.rotate((0,0,0), (0,0,1), 180))
 
+    cim = cq.Workplane("XY", (0,0, 0.0)).circle(0.01).extrude(0.01)
     # draw the cathode identification mark
-    cim = cq.Workplane("XY", (-D/2.,0,L-ef)).\
-          box(cimw, D, ef, centered=(False, True, False))
+    if PM:
+        cim = cq.Workplane("XY", (-D/2.,0,L-ef)).\
+              box(cimw, D, ef, centered=(False, True, False))
 
-    # do intersection
-    cim = cim.cut(cim.translate((0,0,0)).cut(body))
+        # do intersection
+        cim = cim.cut(cim.translate((0,0,0)).cut(body))
 
-    body.cut(cim)
+        body.cut(cim)
 
     #show(body)
     #show(base)
@@ -259,7 +265,7 @@ if __name__ == "__main__" or __name__ == "main_generator":
     color_pin_mark=True
     if len(sys.argv) < 3:
         FreeCAD.Console.PrintMessage('No variant name is given! building CP_Elec_4x53')
-        model_to_build='CP_Elec_4x53'
+        model_to_build='CP_Elec_4x5.3'
     else:
         model_to_build=sys.argv[2]
         if len(sys.argv)==4:
@@ -273,12 +279,13 @@ if __name__ == "__main__" or __name__ == "main_generator":
     else:
         variants = [model_to_build]
 
+    
     for variant in variants:
         FreeCAD.Console.PrintMessage('\r\n'+variant)
         if not variant in all_params:
             print("Parameters for %s doesn't exist in 'all_params', skipping." % variant)
             continue
-        ModelName = all_params[variant].modelName
+        ModelName = variant
         CheckedModelName = ModelName.replace('.', '').replace('-', '_').replace('(', '').replace(')', '')
         Newdoc = App.newDocument(CheckedModelName)
         App.setActiveDocument(CheckedModelName)
@@ -351,10 +358,17 @@ if __name__ == "__main__" or __name__ == "main_generator":
         export_file_name=out_dir+os.sep+ModelName+'.wrl'
         colored_meshes = expVRML.getColoredMesh(Gui, export_objects , scale)
         expVRML.writeVRMLFile(colored_meshes, export_file_name, used_color_keys, LIST_license)
-        # Save the doc in Native FC format
-        saveFCdoc(App, Gui, doc, ModelName,out_dir)
-        #display BBox
-        #FreeCADGui.ActiveDocument.getObject("Part__Feature").BoundingBox = True
-        Gui.activateWorkbench("PartWorkbench")
-        Gui.SendMsgToActiveView("ViewFit")
-        Gui.activeDocument().activeView().viewAxometric()
+        
+        FreeCAD.activeDocument().recompute()
+
+        saveFCdoc(App, Gui, doc, ModelName,out_dir, False)
+
+        #FreeCADGui.activateWorkbench("PartWorkbench")
+        if save_memory == False and check_Model==False:
+            FreeCADGui.SendMsgToActiveView("ViewFit")
+            FreeCADGui.activeDocument().activeView().viewAxometric()
+    
+        if save_memory == True or check_Model==True:
+            docu = FreeCAD.ActiveDocument
+            FreeCAD.Console.PrintMessage('close document {}\r\n'.format(docu.Name))
+            FreeCAD.closeDocument(docu.Name)

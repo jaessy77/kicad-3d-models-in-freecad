@@ -60,6 +60,22 @@ from os.path import expanduser
 import re
 import shaderColors
 
+try:  ## maui py3
+    unicode = unicode
+except NameError:
+    # 'unicode' is undefined, must be Python 3
+    str = str
+    unicode = str
+    bytes = bytes
+    basestring = (str,bytes)
+else:
+    # 'unicode' exists, must be Python 2
+    str = str
+    unicode = unicode
+    bytes = str
+    basestring = basestring
+    py2=True
+
 def say(msg):
     FreeCAD.Console.PrintMessage(msg)
     FreeCAD.Console.PrintMessage('\n')
@@ -67,7 +83,7 @@ def say(msg):
 def sayw(msg):
     FreeCAD.Console.PrintWarning(msg)
     FreeCAD.Console.PrintWarning('\n')
-    
+
 def sayerr(msg):
     FreeCAD.Console.PrintError(msg)
     FreeCAD.Console.PrintWarning('\n')
@@ -132,13 +148,13 @@ class Ui_Dialog(object):
         comboBox_Changed(text)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Material Properties", None, QtGui.QApplication.UnicodeUTF8))
-        self.label.setText(QtGui.QApplication.translate("Dialog", "Materials", None, QtGui.QApplication.UnicodeUTF8))
-        self.label_2.setText(QtGui.QApplication.translate("Dialog", "Color", None, QtGui.QApplication.UnicodeUTF8))
-        self.plainTextEdit.setToolTip(QtGui.QApplication.translate("Dialog", "Shape Color", None, QtGui.QApplication.UnicodeUTF8))
-        self.plainTextEdit_2.setToolTip(QtGui.QApplication.translate("Dialog", "Diffuse Color", None, QtGui.QApplication.UnicodeUTF8))
-        self.label_3.setText(QtGui.QApplication.translate("Dialog", "Diffuse", None, QtGui.QApplication.UnicodeUTF8))
-        self.label_4.setText(QtGui.QApplication.translate("Dialog", "Note: set Material will unmatch colors between wrl and STEP ", None, QtGui.QApplication.UnicodeUTF8))
+        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Material Properties"))
+        self.label.setText(QtGui.QApplication.translate("Dialog", "Materials"))
+        self.label_2.setText(QtGui.QApplication.translate("Dialog", "Color"))
+        self.plainTextEdit.setToolTip(QtGui.QApplication.translate("Dialog", "Shape Color"))
+        self.plainTextEdit_2.setToolTip(QtGui.QApplication.translate("Dialog", "Diffuse Color"))
+        self.label_3.setText(QtGui.QApplication.translate("Dialog", "Diffuse"))
+        self.label_4.setText(QtGui.QApplication.translate("Dialog", "Note: set Material will unmatch colors between wrl and STEP "))
 
 #####################################
 # Function infoDialog
@@ -159,8 +175,8 @@ Mesh = namedtuple('Mesh', ['points', 'faces', 'color', 'transp'])
 #object name: I get an error for freecad_object.Transparency so i use App.getObject('name')
 exportObject = namedtuple('exportObject', ['freecad_object', 'shape_color', 'face_colors'])
 
-def shapeToMesh(shape, color, transp, scale=None):
-    mesh_deviation=0.03 #the smaller the best quality, 1 coarse; 0.03 good compromise :)
+def shapeToMesh(shape, color, transp, scale=None, mesh_deviation=0.03):
+    #mesh_deviation=0.03 #the smaller the best quality, 1 coarse; 0.03 good compromise :)
     mesh_data = shape.tessellate(mesh_deviation)
     points = mesh_data[0]
     if scale != None:
@@ -175,13 +191,13 @@ def writeVRMLFile(objects, filepath, used_color_keys, licence_info=None, creaseA
 
     `Mesh` structure is defined at root."""
     used_colors = None
-    
+
     #creaseAngle=creaseAngle_default #creaseAngle=0.5 good compromise
-    
+
     if used_color_keys is not None:
         used_colors = { x: shaderColors.named_colors[x] for x in used_color_keys }
-    say(used_color_keys)
-    say(used_colors.values())
+    #say(used_color_keys)
+    #say(used_colors.values())
     with open(filepath, 'w') as f:
         # write the standard VRML header
         f.write("#VRML V2.0 utf8\n#kicad StepUp wrl exported\n\n")
@@ -221,7 +237,7 @@ def writeVRMLFile(objects, filepath, used_color_keys, licence_info=None, creaseA
 ###
 def comboBox_Changed(text_combo):
     global ui
-    say(text_combo)
+    #say(text_combo)
     if text_combo not in shaderColors.named_colors:
         return
     if len(shaderColors.named_colors)>1:
@@ -231,7 +247,7 @@ def comboBox_Changed(text_combo):
         ui.plainTextEdit_2.viewport().setPalette(pal)
 
 ###
-def getColoredMesh(Gui, export_objects , scale=None):
+def getColoredMesh(Gui, export_objects , scale=None, mesh_deviation=0.03):
     """ Exports given ComponentModel object using FreeCAD.
 
     `componentObjs` : a ComponentObjs list
@@ -258,9 +274,9 @@ def getColoredMesh(Gui, export_objects , scale=None):
         for face_index in range(len(shape1.Faces)):
             singleFace=shape1.Faces[face_index]
             if applyDiffuse:
-                meshes.append(shapeToMesh(singleFace, exp_obj.face_colors[face_index], transparency, scale))
+                meshes.append(shapeToMesh(singleFace, exp_obj.face_colors[face_index], transparency, scale, mesh_deviation))
             else:
-                meshes.append(shapeToMesh(singleFace, color, transparency, scale))
+                meshes.append(shapeToMesh(singleFace, color, transparency, scale, mesh_deviation))
     return meshes
 ###
 def getNamedColors(color_list):
@@ -274,7 +290,8 @@ def determineColors(Gui, objects, know_material_substitutions=None):
     Dialog = QtGui.QDialog()
     ui = Ui_Dialog()
     ui.setupUi(Dialog)
-    ui.comboBox.addItems(["as is"]+shaderColors.named_colors.keys())
+    #ui.comboBox.addItems(["as is"]+shaderColors.named_colors.keys())
+    ui.comboBox.addItems(["as is"]+list(shaderColors.named_colors))
     material="as is"
 
 
@@ -285,7 +302,7 @@ def determineColors(Gui, objects, know_material_substitutions=None):
         for color in freecad_object.DiffuseColor:
             color = color[:-1]
             if color not in know_material_substitutions:
-                say(color)
+                #say(color)
                 pal = QtGui.QPalette()
                 bgc = QtGui.QColor(color[0]*255, color[1]*255, color[2]*255)
                 pal.setColor(QtGui.QPalette.Base, bgc)
@@ -320,7 +337,7 @@ def generateFileName(label, fullFilePathName, scale):
         filename=path+os.sep+label+'.wrl'
     else:
         filename=path+os.sep+label+'_1_1.wrl'
-    say(filename)
+    #say(filename)
     return filename
 
 def exportVRMLfromSelction(Gui, fullFilePathName):
@@ -339,5 +356,5 @@ def exportVRMLfromSelction(Gui, fullFilePathName):
         export_file_name = generateFileName(sel[0].Label, fullFilePathName, scale)
         #export(objs, fullFilePathName, scale=None)
         colored_meshes = getColoredMesh(Gui, export_objects , scale)
-        say(used_color_keys)
+        #say(used_color_keys)
         writeVRMLFile(colored_meshes, export_file_name, used_color_keys)

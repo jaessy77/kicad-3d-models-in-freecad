@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 #!/usr/bin/python
 #
 # This is derived from a cadquery script for generating QFP models in X3D format.
@@ -91,7 +91,7 @@ STR_licAuthor = "kicad StepUp"
 STR_licEmail = "ksu"
 STR_licOrgSys = "kicad StepUp"
 STR_licPreProc = "OCC"
-STR_licOrg = "FreeCAD"   
+STR_licOrg = "FreeCAD"
 
 LIST_license = ["",]
 #################################################################################################
@@ -99,7 +99,11 @@ LIST_license = ["",]
 # Import cad_tools
 import cq_cad_tools
 # Reload tools
-reload(cq_cad_tools)
+try:
+    reload(cq_cad_tools)
+except:
+    import importlib
+    importlib.reload(cq_cad_tools)
 # Explicitly load all needed functions
 from cq_cad_tools import FuseObjs_wColors, GetListOfObjects, restore_Main_Tools, \
  exportSTEP, close_CQ_Example, exportVRML, saveFCdoc, z_RotateObject, Color_Objects, \
@@ -107,7 +111,7 @@ from cq_cad_tools import FuseObjs_wColors, GetListOfObjects, restore_Main_Tools,
 
 try:
     # Gui.SendMsgToActiveView("Run")
-    from Gui.Command import *
+#    from Gui.Command import *
     Gui.activateWorkbench("CadQueryWorkbench")
     import cadquery as cq
     from Helpers import show
@@ -124,7 +128,7 @@ checkRequirements(cq)
 try:
     close_CQ_Example(App, Gui)
 except: # catch *all* exceptions
-    print "CQ 030 doesn't open example file"
+    print ("CQ 030 doesn't open example file")
 
 import cq_parameters  # modules parameters
 from cq_parameters import *

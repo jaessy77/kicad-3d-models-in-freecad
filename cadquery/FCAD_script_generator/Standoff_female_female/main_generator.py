@@ -104,7 +104,7 @@ from cq_cad_tools import FuseObjs_wColors, GetListOfObjects, restore_Main_Tools,
 try:
     # Gui.SendMsgToActiveView("Run")
     # cq Gui            
-    from Gui.Command import *
+    #from Gui.Command import *
     Gui.activateWorkbench("CadQueryWorkbench")
     import cadquery as cq
     from Helpers import show

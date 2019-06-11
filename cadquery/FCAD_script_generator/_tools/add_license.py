@@ -32,7 +32,11 @@ from collections import namedtuple
 from os.path import expanduser
 
 # additionally needed for POVray export script
-import __builtin__
+try:
+    import __builtin__ as builtin #py2
+except:
+    import builtins as builtin  #py3
+
 import subprocess
 from subprocess import call
 
@@ -42,33 +46,20 @@ STR_int_licAuthor = "your name"
 STR_int_licEmail = "your email"
 STR_int_licOrgSys = ""
 STR_int_licPreProc = ""
-STR_int_licOrg = "FreeCAD"   
+STR_int_licOrg = "FreeCAD"
 
 LIST_int_license = ["Copyright (C) "+datetime.now().strftime("%Y")+", " + STR_int_licAuthor,
                 "",
-                "This program is free software: you can redistribute it and/or modify",
-                "it under the terms of the GNU General Public License as published by",
-                "the Free Software Foundation, either version 3 of the License, or",
-                "any later version.",
-                "",
-                "This program is distributed in the hope that it will be useful,",
-                "but WITHOUT ANY WARRANTY; without even the implied warranty of",
-                "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the",
-                "GNU General Public License for more details.",
-                "",
-                "You should have received a copy of the GNU General Public License",
-                "along with this program.  If not, see http://www.gnu.org/licenses/.",
-                "",
-                "As a special exception, if you create a design which uses this symbol,",
-                "and embed this symbol or unaltered portions of this symbol into the design,",
-                "this symbol does not by itself cause the resulting design to be covered by",
-                "the GNU General Public License.",
-                "This exception does not however invalidate any other reasons why the design",
-                "itself might be covered by the GNU General Public License. ",
-                "If you modify this symbol, you may extend this exception to your version of the symbol,",
-                "but you are not obligated to do so.",
-                "If you do not wish to do so, delete this exception statement from your version",
-                "Risk disclaimer",
+                "This work is licensed under the [Creative Commons CC-BY-SA 4.0 License](https://creativecommons.org/licenses/by-sa/4.0/legalcode), ",
+                "with the following exception:",
+                "To the extent that the creation of electronic designs that use \'Licensed Material\' can be considered to be \'Adapted Material\', ",
+                "then the copyright holder waives article 3 of the license with respect to these designs and any generated files which use data provided ",
+                "as part of the \'Licensed Material\'.",
+                "You are free to use the library data in your own projects without the obligation to share your project files under this or any other license agreement.",
+                "However, if you wish to redistribute these libraries, or parts thereof (including in modified form) as a collection then the exception above does not apply. ",
+                "Please refer to https://github.com/KiCad/kicad-packages3D/blob/master/LICENSE.md for further clarification of the exception.",
+                "Disclaimer of Warranties and Limitation of Liability.",
+                "These libraries are provided in the hope that they will be useful, but are provided without warranty of any kind, express or implied.",
                 "*USE 3D CAD DATA AT YOUR OWN RISK*",
                 "*DO NOT RELY UPON ANY INFORMATION FOUND HERE WITHOUT INDEPENDENT VERIFICATION.*",
                 ]
@@ -80,7 +71,7 @@ LIST_int_license = ["Copyright (C) "+datetime.now().strftime("%Y")+", " + STR_in
 
 
 def say(*arg):
-    FreeCAD.Console.PrintMessage(" ".join(map(str,arg)) + "\r\n")
+    FreeCAD.Console.PrintMessage(" ".join(map(str,arg)) + "\n")
 
 def FNCT_modify_step(PMBL_stepfile,
                      DICT_positions,
@@ -155,17 +146,20 @@ def FNCT_modify_step(PMBL_stepfile,
 
 
 def addLicenseToStep(FLDR_toStepFiles, FNME_stepfile, LIST_license, STR_licAuthor, STR_licEmail="", STR_licOrgSys="", STR_licOrg="",STR_licPreProc=""):
-    if os.path.isfile(FLDR_toStepFiles + os.sep + FNME_stepfile): # test if folder or file..
+    filepath = FLDR_toStepFiles + os.sep + FNME_stepfile
+    if os.path.isfile(filepath): # test if folder or file..
         fname, ext=os.path.splitext(FNME_stepfile)
         if LIST_license[0] == "":
-            LIST_license=LIST_int_license
-        LIST_int_license[0] = "Copyright (C) "+datetime.now().strftime("%Y")+", " + STR_licAuthor
+            LIST_license=list(LIST_int_license)
+        LIST_license[0] = "Copyright (C) "+datetime.now().strftime("%Y")+", " + STR_licAuthor
         if ext == ".stp" or ext == ".step": # test if step file
-            say("Starting of licensing\n")
+            #say("Starting of licensing\n")
             try:
-                HDLR_stepfile = open(FLDR_toStepFiles + os.sep  + FNME_stepfile, 'r') # open
-            except:
-                say("broken_2")
+                HDLR_stepfile = open(filepath, 'r') # open
+            except Exception as exception:
+                FreeCAD.Console.PrintError("Add License: Can't open step file for read access\n")
+                FreeCAD.Console.PrintError("{:s}\n".format(exception))
+                return
 
             HDLR_stepfile.seek(0)
             PMBL_stepfile = HDLR_stepfile.readlines()
@@ -202,17 +196,22 @@ def addLicenseToStep(FLDR_toStepFiles, FNME_stepfile, LIST_license, STR_licAutho
 
             # overwrite step file
             try:
-                HDLR_stepfile_w = open(FLDR_toStepFiles + os.sep  + FNME_stepfile, 'w') # open
-            except:
-                say("broken_3")
-            else:
-                # overwrite with new preamble
-                for line in LIST_PMBL:
-                    HDLR_stepfile_w.write(line + "\n")
-                # add old data section
-                for line in PMBL_stepfile[(DICT_positions["A"]-1):]:
-                    HDLR_stepfile_w.write(line.strip() + "\n")
-                HDLR_stepfile_w.close()
-    say ("done")
+                HDLR_stepfile_w = open(filepath, 'w') # open
+            except Exception as exception:
+                FreeCAD.Console.PrintError("Add License: Can't open step file for write access\n")
+                FreeCAD.Console.PrintError("{:s}\n".format(exception))
+                return
 
+            # overwrite with new preamble
+            for line in LIST_PMBL:
+                HDLR_stepfile_w.write(line + "\n")
+            # add old data section
+            for line in PMBL_stepfile[(DICT_positions["A"]-1):]:
+                HDLR_stepfile_w.write(line.strip() + "\n")
+            HDLR_stepfile_w.close()
+            say ("License addition successful")
+        else:
+            FreeCAD.Console.PrintWarning("Add License: File has wrong file extension: {:s}".format(FNME_stepfile))
+    else:
+        FreeCAD.Console.PrintWarning("Add License: Path does not exist: {:s}".format(filepath))
 ###
