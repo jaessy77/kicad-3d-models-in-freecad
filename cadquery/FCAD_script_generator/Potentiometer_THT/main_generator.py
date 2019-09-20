@@ -46,8 +46,8 @@
 #****************************************************************************
 
 __title__ = "make chip LED's 3D models"
-__author__ = "Frank & Maurice"
-__Comment__ = 'make chip LEDs 3D models exported to STEP and VRML for Kicad StepUP script'
+__author__ = "Frank & Maurice & Stefan"
+__Comment__ = 'make THT potentiometers exported to STEP and VRML for Kicad StepUP script'
 
 ___ver___ = "2.0.0 29/01/2018"
 
@@ -65,11 +65,11 @@ sys.path.append("../_tools")
 import exportPartToVRML as expVRML
 import shaderColors
 
-body_color_key = "white body"  #"white body"
+body_color_key = "blue body"
 body_color = shaderColors.named_colors[body_color_key].getDiffuseFloat()
-pins_color_key = "gold pins"
+pins_color_key = "metal grey pins"
 pins_color = shaderColors.named_colors[pins_color_key].getDiffuseFloat()
-top_color_key = "led white"
+top_color_key = "metal copper"
 top_color = shaderColors.named_colors[top_color_key].getDiffuseFloat()
 pinmark_color_key = "green body"
 pinmark_color = shaderColors.named_colors[pinmark_color_key].getDiffuseFloat()
@@ -157,205 +157,174 @@ except: # catch *all* exceptions
 def make_chip(model, all_params):
     # dimensions for LED's
     package_found = True
-    
+
     package_type = all_params[model]['package_type']
     length = all_params[model]['length'] # package length
     width = all_params[model]['width'] # package width
     height = all_params[model]['height'] # package height
-    pin_band = all_params[model]['pin_band'] # pin band
-    pin_thickness = all_params[model]['pin_thickness'] # pin thickness
-    if pin_thickness == 'auto':
-        pin_thickness = pin_band/10.0
-    base_height = all_params[model]['base_height'] # pin thickness
-    edge_fillet = all_params[model]['edge_fillet'] # fillet of edges
-    place_pinmark = all_params[model]['pinmark']
-    pinmark = 0
-    if edge_fillet == 'auto':
-        edge_fillet = pin_thickness
-
-    if package_type == 'chip_lga':
-        pin_distance_edge = all_params[model]['pin_distance_edge']
-        if pin_thickness == 'auto':
-            pin_thickness = 0.01
-        # creating base
-        base = cq.Workplane("XY").workplane(offset=pin_thickness).\
-        box(length, width, base_height,centered=(True, True, False))
-        #creating top
-        top = cq.Workplane("XZ").workplane(offset=-width/2.).\
-        moveTo(-(length/2.),base_height+pin_thickness).lineTo((-(length/2))*0.9, height).\
-        lineTo((length/2.)*0.9, height).lineTo(length/2.,base_height+pin_thickness).close().extrude(width)
-        #creating pins
-        pin_center = length/2.-pin_distance_edge-pin_band/2.
-        pins = cq.Workplane("XY").moveTo(-pin_center, 0).\
-        box(pin_band, width-2*pin_distance_edge, pin_thickness,centered=(True, True, False)).\
-        moveTo(pin_center, 0).\
-        box(pin_band, width-2*pin_distance_edge, pin_thickness,centered=(True, True, False))
-        if place_pinmark == True:
-            pinmark_side = (length-pin_distance_edge*2.-pin_band*2.)*0.8
-            pinmark_length = sqrt(pinmark_side*pinmark_side - pinmark_side/2*pinmark_side/2)
-            pinmark = cq.Workplane("XY").workplane(offset=pin_thickness/2).moveTo(-pinmark_length/2,0).\
-            lineTo(pinmark_length/2,pinmark_side/2).lineTo(pinmark_length/2,-pinmark_side/2).close().extrude(pin_thickness/2)
-    elif package_type == 'chip_convex':
-        # creating base
-        base = cq.Workplane("XY").workplane(offset=pin_thickness).\
-        box(length-2*pin_thickness, width, base_height-2*pin_thickness,centered=(True, True, False))
-        # creating top
-        top = cq.Workplane("XZ").workplane(offset=-width/2).moveTo(-(length/2-pin_band),base_height-pin_thickness).\
-        lineTo((-(length/2-pin_band))*0.9, height).lineTo((length/2-pin_band)*0.9, height).\
-        lineTo(length/2-pin_band,base_height-pin_thickness).close().extrude(width)
-        # creating pins
-        pins = cq.Workplane("XY").moveTo((length-pin_band)/2.,0).\
-        box(pin_band, width, base_height,centered=(True, True, False)).moveTo(-(length-pin_band)/2.,0).\
-        box(pin_band, width, base_height,centered=(True, True, False)).edges("|Y").fillet(edge_fillet)
-        pins = pins.workplane(offset=base_height).moveTo(0, width/2).rect(length-pin_band/2, width/4, centered=True).cutThruAll().\
-        moveTo(0, -width/2).rect(length-pin_band/2, width/4, centered=True).cutThruAll()
-        pins = pins.cut(base)
-        # creating pinmark
-        if place_pinmark == True:
-            pinmark_side = width*0.8
-            pinmark_length = sqrt(pinmark_side*pinmark_side - pinmark_side/2*pinmark_side/2)
-            pinmark = cq.Workplane("XY").workplane(offset=pin_thickness/2).moveTo(-pinmark_length/2,0).\
-            lineTo(pinmark_length/2,pinmark_side/2).lineTo(pinmark_length/2,-pinmark_side/2).close().extrude(pin_thickness/2)
-   
-    elif package_type == 'chip_concave':
-        base = cq.Workplane("XY").workplane(offset=pin_thickness).\
-        box(length-2*pin_thickness, width, base_height-2*pin_thickness,centered=(True, True, False))
-        base = base.workplane(offset=base_height).moveTo(-length/2, -width/4-0.1).\
-        threePointArc((-length/2+pin_band/2+0.1, 0),(-length/2, width/4+0.1),forConstruction=False).close().\
-        moveTo(length/2, -width/4-0.1).\
-        threePointArc((length/2-pin_band/2-0.1, 0),(length/2, width/4+0.1),forConstruction=False).close().cutThruAll()
-        # creating top
-        top = cq.Workplane("XZ").workplane(offset=-width/2).moveTo(-(length/2-pin_band),base_height-pin_thickness).\
-        lineTo((-(length/2-pin_band))*0.9, height).lineTo((length/2-pin_band)*0.9, height).\
-        lineTo(length/2-pin_band,base_height-pin_thickness).close().extrude(width)
-        # creating pins
-        pins = cq.Workplane("XY").moveTo((length-pin_band)/2.,0).\
-        box(pin_band, width, base_height,centered=(True, True, False)).moveTo(-(length-pin_band)/2.,0).\
-        box(pin_band, width, base_height,centered=(True, True, False)).edges("|Y").fillet(edge_fillet)
-        pins = pins.workplane(offset=base_height).moveTo(-length/2, -width/4).\
-        threePointArc((-length/2+pin_band/2, 0),(-length/2, width/4),forConstruction=False).close().\
-        moveTo(length/2, -width/4).\
-        threePointArc((length/2-pin_band/2, 0),(length/2, width/4),forConstruction=False).close().cutThruAll()
-        pins = pins.cut(base)
-        # creating pinmark
-        if place_pinmark == True:
-            pinmark_side = width*0.8
-            pinmark_length = sqrt(pinmark_side*pinmark_side - pinmark_side/2*pinmark_side/2)
-            pinmark = cq.Workplane("XY").workplane(offset=pin_thickness/2).moveTo(-pinmark_length/2,0).\
-            lineTo(pinmark_length/2,pinmark_side/2).lineTo(pinmark_length/2,-pinmark_side/2).close().extrude(pin_thickness/2)
-   
-    elif package_type == 'chip_concave_4':
+    pin1corner = all_params[model]['pin1corner']
+    pincnt = all_params[model]['pincnt']
+    base_height = all_params[model]['base_height']
+    screw = all_params[model]['screw']
+    rotation = all_params[model]['rotation']
+    pinmark = all_params[model]['pinmark']
+    source = all_params[model]['source']
     
-        top_length = all_params[model]['top_length']
-        top_width = all_params[model]['top_width']
-        top_height = all_params[model]['top_height']
+    top = None
+    base = None
+    pins = None
+    pinmark = None
+    
+    if package_type == 'Bourns_3005':
+        #
+        p0 = pincnt[0]
+        p1 = pincnt[1]
+        p2 = pincnt[2]
+    
+        # Create base
+        base = cq.Workplane("XY").workplane(offset=0.0).moveTo(0.0, 0.0).rect(length, width, True).extrude(height)
+        base0 = cq.Workplane("XY").workplane(offset=0.0).moveTo(0.0, 0.0).rect(length - (2* 0.76), width + 0.2, True).extrude(0.89)
+        base = base.cut(base0)
+        base = base.faces(">X").edges(">Y").fillet(height / 60.0)
+        base = base.faces(">X").edges("<Y").fillet(height / 60.0)
+        base = base.faces("<X").edges(">Y").fillet(height / 60.0)
+        base = base.faces("<X").edges("<Y").fillet(height / 60.0)
+        base = base.faces(">Z").fillet(height / 60.0)
+        base = base.translate((0.0 - ((length / 2.0) - pin1corner[0]), (p1[2] / 2.0), 0.0))
 
-        pincnt = all_params[model]['pincnt']
+        # Create top (screw)
+        st = screw[0]
+        sl = screw[1]
+        sd = screw[2]
+        sc = screw[3]
+        sh = screw[4]
         
-        # creating base
-        base = cq.Workplane("XY").workplane(offset=pin_thickness).moveTo(0.0, 0.0).rect(length, width, True).extrude(height)
-        
-        # creating top
-        top = cq.Workplane("XY").workplane(offset=pin_thickness + (height - 0.0001)).moveTo(0.0, 0.0).rect(top_length, top_width, True).extrude(top_height)
-        top = top.faces("<X").edges(">Z").chamfer(top_height - 0.002, top_height / 4.0)
-        top = top.faces(">X").edges(">Z").chamfer(top_height / 4.0, top_height - 0.002)
-        top = top.faces(">Z").edges(">X").fillet(top_height / 10.0)
-        top = top.faces(">Z").edges("<X").fillet(top_height / 10.0)
+        if st == 'lefttop':
+            sx = length / 2.0
+            top = cq.Workplane("ZY").workplane(offset = (length / 2.0) - 0.1).moveTo(sh, 0.0).circle(sd / 2.0, False).extrude(sl + 0.1)
+            top = top.faces("<X").fillet(sl / 5.0)
+            top0 = cq.Workplane("ZY").workplane(offset = ((length / 2.0)) + sl + 0.1).moveTo(sh, 0.0).rect(sd + 1.0, sd / 5.0, True).extrude(0.0 - (sc + 0.1))
+            top = top.cut(top0)
+            top = top.translate((0.0 - ((length / 2.0) - pin1corner[0]), (p1[2] / 2.0), 0.0))
 
-        # creating pins
-        pins = None
-        for i in range(0, len(pincnt)):
-            p = pincnt[i]
-            px = p[0]
-            py = p[1]
-            pw = p[2]
+    
+    if package_type == 'Bourns_3299P' or package_type == 'Bourns_3299W' or package_type == 'Bourns_3299X' or package_type == 'Bourns_3299Y' or package_type == 'Bourns_3299Z':
+        #
+        p0 = pincnt[0]
+        p1 = pincnt[1]
+        p2 = pincnt[2]
+    
+        # Create base
+        base = cq.Workplane("XY").workplane(offset=0.0).moveTo(0.0, 0.0).rect(length, width, True).extrude(height)
+        base0 = cq.Workplane("XY").workplane(offset=0.0).moveTo(0.0, 0.0).rect(length - (2* 0.38), width + 0.2, True).extrude(0.38)
+        base = base.cut(base0)
+        base0 = cq.Workplane("XY").workplane(offset=0.0).moveTo(0.0, 0.0).rect(length + 0.2, width- (2* 0.38), True).extrude(0.38)
+        base = base.cut(base0)
+        base0 = cq.Workplane("XY").workplane(offset=0.0).moveTo((length / 2.0) - (0.38 / 2.0), 0.0).rect(0.38, width - (2* 0.38), True).extrude(height)
+        base = base.cut(base0)
+
+        base = base.faces(">X").edges(">Y").fillet(height / 60.0)
+        base = base.faces(">X").edges("<Y").fillet(height / 60.0)
+        base = base.faces("<X").edges(">Y").fillet(height / 60.0)
+        base = base.faces("<X").edges("<Y").fillet(height / 60.0)
+        base = base.faces(">Z").fillet(height / 60.0)
+
+        if package_type == 'Bourns_3299P':
+            base = base.translate((((length / 2.0) - pin1corner[0]), 0.0 - ((width / 2.0) - (pin1corner[1])), 0.0))
+
+        if package_type == 'Bourns_3299W' or package_type == 'Bourns_3299X' or package_type == 'Bourns_3299Y' or package_type == 'Bourns_3299Z':
+            base = base.rotate((0,0,0), (1,0,0), 90.0)
+            base = base.rotate((0,0,0), (0,1,0), 90.0)
+            base = base.translate((0.0, height / 2.0, length / 2.0))
+            base = base.translate((0.0 - ((width / 2.0) - pin1corner[0]), 0.0 - ((height / 2.0) - (pin1corner[1])), 0.0))
+
+        # Create top (screw)
+        st = screw[0]
+        sl = screw[1]
+        sd = screw[2]
+        sc = screw[3]
+        sz = screw[4]
+        sy = screw[5]
+
+        if st == 'lefttop':
+            sx = length / 2.0
+            top = cq.Workplane("ZY").workplane(offset = 0.0 - 0.1).moveTo(0.0, 0.0).circle(sd / 2.0, False).extrude(sl + 0.1)
+            top = top.faces("<X").fillet(sl / 5.0)
+            top0 = cq.Workplane("ZY").workplane(offset = sl + 0.1).moveTo(0.0, 0.0).rect(sd + 1.0, sd / 5.0, True).extrude(0.0 - (sc + 0.1))
+            top = top.cut(top0)
+
+            if package_type == 'Bourns_3299P':
+                top = top.translate((0.0 - (length / 2.0), sy, sz))
+                top = top.translate((((length / 2.0) - pin1corner[0]), 0.0 - ((width / 2.0) - (pin1corner[1])), 0.0))
+
+            if package_type == 'Bourns_3299W' or package_type == 'Bourns_3299Y':
+                top = top.rotate((0,0,0), (1,0,0), 90.0)
+                top = top.rotate((0,0,0), (0,1,0), 90.0)
+                top = top.translate((0.0, 0.0, length))
+                top = top.translate(((pin1corner[0] - sy), pin1corner[1] - sz, 0.0))
+
+            if package_type == 'Bourns_3299X' or package_type == 'Bourns_3299Z':
+                top = top.rotate((0,0,0), (1,0,0), 90.0)
+                top = top.translate((0.0 - width, 0.0, 0.0))
+                top = top.translate(((pin1corner[0]), pin1corner[1] - sz, length - sy))
+
+
+    # creating pins
+    for i in range(0, len(pincnt)):
+        p = pincnt[i]
+        pt = p[0]
+        px = p[1]
+        py = p[2]
+        
+        if pt == 'tht':
             pl = p[3]
+            pw = p[4]
+            ph = p[5]
+            p2 = cq.Workplane("XY").workplane(offset = 1.0).moveTo(px, py).rect(pl, pw, True).extrude((0.0 - ph) - 1.0)
+            if pl > pw:
+                p2 = p2.faces("<Z").edges("<X").fillet(pl / 2.5)
+                p2 = p2.faces("<Z").edges(">X").fillet(pl / 2.5)
+            else:
+                p2 = p2.faces("<Z").edges("<Y").fillet(pw / 2.5)
+                p2 = p2.faces("<Z").edges(">Y").fillet(pw / 2.5)
+                
+            p3 = None
+            if py > 0.002:
+                p3 = cq.Workplane("XY").workplane(offset = 1.0).moveTo(px - (pl / 2.0), py + (pw / 2.0)).rect(pl, 0.0 - (width / 2.0), False).extrude(pw)
+                p2 = p2.union(p3)
+                p2 = p2.faces(">Z").edges(">Y").fillet(pw / 1.5)
+            else:
+                p3 = cq.Workplane("XY").workplane(offset = 1.0).moveTo(px - (pl / 2.0), py - (pw / 2.0)).rect(pl, width / 2.0, False).extrude(pw)
+                p2 = p2.union(p3)
+                p2 = p2.faces(">Z").edges("<Y").fillet(pw / 1.5)
+
+        if pt == 'round':
+            pd = p[3]
             ph = p[4]
-            
-            p2 = cq.Workplane("XY").workplane(offset=0.0).moveTo(px, py).rect(pl, pw, True).extrude(ph)
-            
-            pcx = 0.0
-            if px > 0:
-                pcx = px + (pl / 2.0)
-            else:
-                pcx = (px - (pl / 2.0))
-            
-            pc0 = cq.Workplane("XY").workplane(offset=0.0).moveTo(pcx, py).circle(pw / 4.0, False).extrude(2 * base_height)
-            p2 = p2.cut(pc0)
-            base = base.cut(pc0)
-
-            if i == 0:
-                pins = p2
-            else:
-                pins = pins.union(p2)
-
-        # creating pinmark
-        if place_pinmark == True:
-            pinmark_side = width*0.4
-            pinmark_length = sqrt(pinmark_side*pinmark_side - pinmark_side/2*pinmark_side/2)
-            pinmark = cq.Workplane("XY").workplane(offset=pin_thickness/2).moveTo(-pinmark_length/2,0).\
-            lineTo(pinmark_length/2,pinmark_side/2).lineTo(pinmark_length/2,-pinmark_side/2).close().extrude(pin_thickness/2)
+            p2 = cq.Workplane("XY").workplane(offset = 1.0).moveTo(px, py).circle(pd / 2.0, False).extrude((0.0 - ph) - 1.0)
+            p2 = p2.faces("<Z").fillet(pd / 2.5)
+        
+        if i == 0:
+            pins = p2
         else:
-           pinmark = cq.Workplane("XY").workplane(offset=pin_thickness + 0.05).moveTo(0.0, 0.0).rect(0.05, 0.05, True).extrude(0.05)
+            pins = pins.union(p2)
 
-   
-    elif package_type == 'plcc_a':
-        pincnt = all_params[model]['pincnt']
-        #
-        # Make the main block
-        base = cq.Workplane("XY").workplane(offset=base_height).moveTo(0.0, 0.0).rect(length, width, True).extrude(height)
-        #
-        # Cut out the edge of the corner
-        p2 = cq.Workplane("XY").workplane(offset=base_height + (height * 0.8)).moveTo(0.0, 0.0).rect(length, width, True).extrude(height)
-        p2 = p2.rotate((0,0,0), (0,0,1), 45.0)
-        p2 = p2.translate((0.0 - (length * 0.75), (width * 0.75), 0.0))
-        base = base.cut(p2)
-        #
-        # Make rounded top
-        base = base.faces(">Z").fillet(height / 20.0)
-        #
-        # Cut out the circular hole ontop
-        tp = cq.Workplane("XY").workplane(offset=base_height + (height / 2.0)).moveTo(0.0, 0.0).circle(width / 3.0, False).extrude(2 * height)
-        base = base.cut(tp)
-        base = base.faces(">Z[3]").chamfer(height / 5.0)
-        #
-        # Create the glass top
-        top = cq.Workplane("XY").workplane(offset=base_height + (height / 2.0)).moveTo(0.0, 0.0).circle(width / 3.0, False).extrude(height / 4.0)
+    # Pin marker, dummy
+    pinmark = cq.Workplane("XY").workplane(offset=height / 2.0).moveTo(0.0, 0.0).rect(0.1, 0.1, True).extrude(0.1)
+    pinmark = pinmark.translate((0.0 - ((length / 2.0) - pin1corner[0]), (p1[2] / 2.0), 0.0))
+    
+    base = base.translate((0.0, 0.0, base_height))
+    top = top.translate((0.0, 0.0, base_height))
+    pins = pins.translate((0.0, 0.0, base_height))
+    pinmark = pinmark.translate((0.0, 0.0, base_height))
         
-        pins = None
-        for i in range(0, len(pincnt)):
-            p = pincnt[i]
-            px = p[0]
-            py = p[1]
-            pw = p[2]
-            pl = p[3]
-            ph = p[4]
-            
-            p2 = cq.Workplane("XY").workplane(offset=0.0).moveTo(px, py).rect(pl, pw, True).extrude(ph)
-            p3 = cq.Workplane("XY").workplane(offset=pin_thickness).moveTo(px, py).rect(pl - (2.0 * pin_thickness), pw + (2.0 * pin_thickness), True).extrude(ph - (2.0 * pin_thickness))
-            p3 = p3.faces("<X").fillet(pin_thickness / 2.0)
-            p3 = p3.faces(">X").fillet(pin_thickness / 2.0)
-            p2 = p2.cut(p3)
-            if px < 0:
-                p2 = p2.faces("<X").edges(">Z").fillet(pin_thickness / 2.0)
-                p2 = p2.faces("<X").edges("<Z").fillet(pin_thickness / 2.0)
-            else:
-                p2 = p2.faces(">X").edges(">Z").fillet(pin_thickness / 2.0)
-                p2 = p2.faces(">X").edges("<Z").fillet(pin_thickness / 2.0)
-
-            if i == 0:
-                pins = p2
-            else:
-                pins = pins.union(p2)
-            
-        pinmark = cq.Workplane("XY").workplane(offset=pin_thickness + (height / 2.0)).moveTo(0.0, 0.0).circle(width / 3.0, False).extrude(height / 8.0)
-        
-    else:
+    if base == None:
         package_found = False
         base = 0
         top = 0
         pins = 0
         pinmark = 0
+
     return (base, top, pins, pinmark, package_found)
     
 
@@ -367,7 +336,7 @@ import add_license as Lic
 
 # when run from command line
 if __name__ == "__main__" or __name__ == "main_generator":
-    destination_dir = '/LED_SMD.3dshapes'
+    destination_dir = '/Potentiometer_THT.3dshapes'
     expVRML.say(expVRML.__file__)
     FreeCAD.Console.PrintMessage('\r\nRunning...\r\n')
 
@@ -384,7 +353,7 @@ if __name__ == "__main__" or __name__ == "main_generator":
     models_dir=sub_path+"_3Dmodels"
     #expVRML.say(models_dir)
     #stop
-    
+
     try:
         with open('cq_parameters.yaml', 'r') as f:
             all_params = yaml.load(f)
@@ -394,14 +363,14 @@ if __name__ == "__main__" or __name__ == "main_generator":
 
     from sys import argv
     models = []
-
+    
     if len(sys.argv) < 3:
         FreeCAD.Console.PrintMessage('No variant name is given! building:\n')
         model_to_build = all_params.keys()[0]
         print model_to_build
     else:
         model_to_build = sys.argv[2]
-    
+
     if model_to_build == "all":
         models = all_params
         save_memory=True
@@ -410,9 +379,11 @@ if __name__ == "__main__" or __name__ == "main_generator":
 
     for model in models:
         if not model in all_params.keys():
-            print("Parameters for %s doesn't exist in 'all_params', skipping." % model)
+            FreeCAD.Console.PrintMessage("Parameters for %s doesn't exist in 'all_params', skipping." % model)
             continue
-        print("building %s" % model)
+        FreeCAD.Console.PrintMessage('building %s\r\n' % model)
+        file_name = all_params[model]['file_name']
+
         ModelName = model
         CheckedModelName = ModelName.replace('.', '').replace('-', '_').replace('(', '').replace(')', '')
         Newdoc = App.newDocument(CheckedModelName)
@@ -420,7 +391,7 @@ if __name__ == "__main__" or __name__ == "main_generator":
         Gui.ActiveDocument=Gui.getDocument(CheckedModelName)
         base, top, pins, pinmark, package_found = make_chip(model, all_params)
         if package_found == False:
-            print("package_type is not recognized")
+            FreeCAD.Console.PrintMessage("package_type is not recognized")
             continue
             
         try:
@@ -430,7 +401,7 @@ if __name__ == "__main__" or __name__ == "main_generator":
                 body_color = shaderColors.named_colors[body_color_key].getDiffuseFloat()
         except:
             # Default value
-            body_color_key = "white body"  #"white body"
+            body_color_key = "blue body"
             body_color = shaderColors.named_colors[body_color_key].getDiffuseFloat()
             
             
@@ -441,7 +412,7 @@ if __name__ == "__main__" or __name__ == "main_generator":
                 top_color = shaderColors.named_colors[top_color_key].getDiffuseFloat()
         except:
             # Default value
-            top_color_key = "led white"
+            top_color_key = "metal copper"
             top_color = shaderColors.named_colors[top_color_key].getDiffuseFloat()
 
         try:
@@ -451,7 +422,7 @@ if __name__ == "__main__" or __name__ == "main_generator":
                 pins_color = shaderColors.named_colors[pins_color_key].getDiffuseFloat()
         except:
             # Default value
-            pins_color_key = "gold pins"
+            pins_color_key = "metal grey pins"
             pins_color = shaderColors.named_colors[pins_color_key].getDiffuseFloat()
 
         try:
@@ -516,21 +487,21 @@ if __name__ == "__main__" or __name__ == "main_generator":
             os.makedirs(out_dir)
         #out_dir="./generated_qfp/"
         # export STEP model
-        exportSTEP(doc, ModelName, out_dir)
+        exportSTEP(doc, file_name, out_dir)
         if LIST_license[0]=="":
             LIST_license=Lic.LIST_int_license
             LIST_license.append("")
-        Lic.addLicenseToStep(out_dir+'/', ModelName+".step", LIST_license,\
+        Lic.addLicenseToStep(out_dir+'/', file_name+".step", LIST_license,\
                            STR_licAuthor, STR_licEmail, STR_licOrgSys, STR_licOrg, STR_licPreProc)
         # scale and export Vrml model
         scale=1/2.54
-        #exportVRML(doc,ModelName,scale,out_dir)
+        #exportVRML(doc,file_name,scale,out_dir)
         objs=GetListOfObjects(FreeCAD, doc)
         expVRML.say("######################################################################")
         expVRML.say(objs)
         expVRML.say("######################################################################")
         export_objects, used_color_keys = expVRML.determineColors(Gui, objs, material_substitutions)
-        export_file_name=out_dir+os.sep+ModelName+'.wrl'
+        export_file_name=out_dir+os.sep+file_name+'.wrl'
         colored_meshes = expVRML.getColoredMesh(Gui, export_objects , scale)
         expVRML.writeVRMLFile(colored_meshes, export_file_name, used_color_keys, LIST_license)
 
@@ -540,17 +511,17 @@ if __name__ == "__main__" or __name__ == "main_generator":
             Gui.activeDocument().activeView().viewAxometric()
 
         # Save the doc in Native FC format
-        saveFCdoc(App, Gui, doc, ModelName,out_dir, False)
-
+        saveFCdoc(App, Gui, doc, file_name,out_dir, False)
 
         check_Model=False
         if save_memory == True or check_Model==True:
+            check_Model = True
             doc=FreeCAD.ActiveDocument
             FreeCAD.closeDocument(doc.Name)
 
-        step_path=os.path.join(out_dir,ModelName+u'.step')
+        step_path=os.path.join(out_dir,file_name+u'.step')
         if check_Model==True:
-            #ImportGui.insert(step_path,ModelName)
+            #ImportGui.insert(step_path,file_name)
             ImportGui.open(step_path)
             docu = FreeCAD.ActiveDocument
             if cq_cad_tools.checkUnion(docu) == True:
@@ -558,25 +529,14 @@ if __name__ == "__main__" or __name__ == "main_generator":
             else:
                 FreeCAD.Console.PrintError('step file is NOT Unioned\n')
                 stop
-            FC_majorV=int(FreeCAD.Version()[0])
-            FC_minorV=int(FreeCAD.Version()[1])
-            if FC_majorV == 0 and FC_minorV >= 17:
-                for o in docu.Objects:
-                    if hasattr(o,'Shape'):
-                        chks=cq_cad_tools.checkBOP(o.Shape)
-                        print 'chks ',chks
-                        print cq_cad_tools.mk_string(o.Label)
-                        if chks != True:
-                            msg='shape \''+o.Name+'\' \''+cq_cad_tools.mk_string(o.Label)+'\' is INVALID!\n'
-                            FreeCAD.Console.PrintError(msg)
-                            FreeCAD.Console.PrintWarning(chks[0])
-                            stop
-                        else:
-                            msg='shape \''+o.Name+'\' \''+cq_cad_tools.mk_string(o.Label)+'\' is valid\n'
-                            FreeCAD.Console.PrintMessage(msg)
-            else:
-                FreeCAD.Console.PrintError('BOP check requires FC 0.17+\n')
-            # Save the doc in Native FC format
-            saveFCdoc(App, Gui, docu, ModelName,out_dir, False)
+                
+            if save_memory == False:
+                # Save the doc in Native FC format
+                saveFCdoc(App, Gui, docu, file_name,out_dir, False)
+
+        if save_memory == True:
             doc=FreeCAD.ActiveDocument
             FreeCAD.closeDocument(doc.Name)
+
+    if save_memory == True:
+        sys.exit()

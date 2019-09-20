@@ -33,15 +33,17 @@ Params = namedtuple("Params", [
     'b',    # pin width
     'e',    # pin (center-to-center) distance
     'm',    # margin between pins and body
-    'ps',   # pad shape square, rounded or concave
+    'ps',   # pad shape square, rounded, concave or custom
     'npx',  # number of pins along X axis (width)
     'npy',  # number of pins along y axis (length)
     'epad',  # exposed pad, None, radius as float for circular or the dimensions as tuple: (width, length) for square
     'excluded_pins', #pins to exclude
     'modelName', #modelName
     'rotation', #rotation if required
-    'dest_dir_prefix' #destination dir prefixD2 = params.epad[0]
+    'dest_dir_prefix', #destination dir prefixD2 = params.epad[0]
+    'pin_shapes',   # coords for pin shapes as [(x,y)]
 ])
+Params.__new__.__defaults__ = (None,) * len(Params._fields)
 
 all_params_qfn = {
     'AMS_LGA-10-1EP_2.7x4mm_P0.6mm': Params(
@@ -741,6 +743,38 @@ kicad_naming_params_qfn = {
         rotation = -90, # rotation if required
         dest_dir_prefix = '../Housings_DFN_QFN.3dshapes/'
         ),
+    'DFN-4-1EP_1x1mm_P0.65mm_EP0.5x0.5mm': Params( # from http://ww1.microchip.com/downloads/en/DeviceDoc/MIC550x-300mA-Single-Output-LDO-in-Small-Packages-DS20006006A.pdf
+        c = 0.025,      # pin thickness, body center part height
+#        K=0.2,         # Fillet radius for pin edges
+        L = 0.2,        # pin top flat part length (including fillet radius)
+        fp_s = True,    # True for circular pinmark, False for square pinmark (useful for diodes)
+        fp_r = 0.2,     # first pin indicator radius
+        fp_d = 0.08,    # first pin indicator distance from edge
+        fp_z = 0.01,    # first pin indicator depth
+        ef = 0.0,       # fillet of edges  Note: bigger bytes model with fillet
+        cce = 0.0,      # epad chamfer
+        D = 1.0,        # body overall length
+        E = 1.0,        # body overall width
+        A1 = 0.02,      # body-board separation  maui to check
+        A2 = 0.55,      # body height
+        b = 0.225,      # pin width
+        e = 0.65,       # pin (center-to-center) distance
+        m = 0.0,        # margin between pins and body
+        ps = 'custom',  # pads shape
+        pin_shapes = [
+            [(-0.65/2-0.225/2, -0.5), (-0.65/2+0.225/2, -0.5), (-0.65/2+0.225/2, -0.5+0.07), (-0.3925, -0.25), (-0.65/2-0.225/2, -0.25)],
+            [(0.65/2+0.225/2, -0.5), (0.65/2-0.225/2, -0.5), (0.65/2-0.225/2, -0.5+0.07), (0.3925, -0.25), (0.65/2+0.225/2, -0.25)],
+            [(0.65/2+0.225/2, 0.5), (0.65/2-0.225/2, 0.5), (0.65/2-0.225/2, 0.5-0.07), (0.3925, 0.25), (0.65/2+0.225/2, 0.25)],
+            [(-0.65/2-0.225/2, 0.5), (-0.65/2+0.225/2, 0.5), (-0.65/2+0.225/2, 0.5-0.07), (-0.3925, 0.25), (-0.65/2-0.225/2, 0.25)],
+        ],
+        npx = 2,        # number of pins along X axis (width)
+        npy = 0,        # number of pins along y axis (length)
+        epad = (0.5,0.5,45), # e Pad
+        excluded_pins = None, #no pin excluded
+        modelName = 'DFN-4-1EP_1x1mm_P0.65mm_EP0.5x0.5mm', #modelName
+        rotation = -90, # rotation if required
+        dest_dir_prefix = '../Housings_DFN_QFN.3dshapes/'
+        ),
     'DFN-6-1EP_1.2x1.2mm_P0.4mm_EP0.3x0.94mm': Params( # from http://www.onsemi.com/pub/Collateral/NCP133-D.PDF
         c = 0.025,        # pin thickness, body center part height
 #        K=0.2,          # Fillet radius for pin edges
@@ -818,6 +852,32 @@ kicad_naming_params_qfn = {
         modelName = 'DFN-6-1EP_2x2mm_Pitch0.65mm', #modelName
         rotation = -90, # rotation if required
         dest_dir_prefix = '../Housings_DFN_QFN.3dshapes/'
+        ),
+    'TDFN-6-1EP_2.5x2.5mm_P0.65mm_EP1.3x2mm': Params( # from https://www.nve.com/Downloads/ab3.pdf
+        c = 0.2,        # pin thickness, body center part height
+#        K=0.2,         # Fillet radius for pin edges
+        L = 0.3,        # pin top flat part length (including fillet radius)
+        fp_s = True,    # True for circular pinmark, False for square pinmark (useful for diodes)
+        fp_r = 0.4,     # first pin indicator radius
+        fp_d = 0.08,    # first pin indicator distance from edge
+        fp_z = 0.01,    # first pin indicator depth
+        ef = 0.0, # 0.05,   # fillet of edges  Note: bigger bytes model with fillet
+        cce = 0.1,      # 0.45 chamfer of the epad 1st pin corner
+        D = 2.5,        # body overall length
+        E = 2.5,        # body overall width
+        A1 = 0.05,      # body-board separation  maui to check
+        A2 = 0.8,       # body height
+        b = 0.3,        # pin width
+        e = 0.65,       # pin (center-to-center) distance
+        m = 0.00,       # margin between pins and body
+        ps = 'square',  # square pads
+        npx = 3,  # number of pins along X axis (width)
+        npy = 0,  # number of pins along y axis (length)
+        epad = (2.0, 1.3), # e Pad #epad = None, # e Pad
+        excluded_pins = None, #no pin excluded
+        modelName = 'TDFN-6-1EP_2.5x2.5mm_P0.65mm_EP1.3x2mm', #modelName
+        rotation = -90, # rotation if required
+        dest_dir_prefix = '../Package_DFN_QFN.3dshapes/'
         ),
     'DFN-6-1EP_3x3mm_Pitch0.95mm': Params( # from https://www.onsemi.com/pub/Collateral/506AX.PDF
         c = 0.2,        # pin thickness, body center part height
@@ -2300,6 +2360,40 @@ kicad_naming_params_qfn = {
         modelName = 'QFN-28-1EP_6x6mm_Pitch0.65mm', #modelName
         rotation = -90, # rotation if required
         dest_dir_prefix = '../Housings_DFN_QFN.3dshapes/'
+        ),
+    'QFN-28-1EP_6x6mm_P0.65mm_EP4.8x4.8mm': Params(
+        #
+        # QFN, 28 Pin (https://www.semtech.com/uploads/documents/DS_SX1276-7-8-9_W_APP_V6.pdf), generated with kicad-footprint-generator ipc_dfn_qfn_generator.py
+        # This model have been auto generated based on the foot print file
+        # A number of paramters have been fixed or guessed, such as A2
+        # 
+        # The foot print that uses this 3D model is QFN-28-1EP_6x6mm_P0.65mm_EP4.8x4.8mm.kicad_mod
+        # 
+        c = 0.2,           # pin thickness, body center part height
+#        K = 0.2,         # Fillet radius for pin edges
+        L = 0.4,         # pin bottom flat part length (including corner arc)
+        fp_s = True,          # True for circular pinmark, False for square pinmark (useful for diodes)
+        fp_r = 0.5,          # First pin indicator radius
+        fp_d = 0.1,          # First pin indicator distance from edge
+        fp_z = 0.01,       # first pin indicator depth
+        ef = 0.0,          # fillet of edges  Note: bigger bytes model with fillet
+#        cc1 = 0.25,        # 0.45 chamfer of the 1st pin corner
+        cce = 0.25,        # 0.45 chamfer of the epad 1st pin corner
+        D = 6.0,         # body length
+        E = 6.0,          # body overall width
+        A1 = 0.03,          # body-board separation
+        A2 = 0.75,          # body-board separation
+        b = 0.3,          # pin width
+        e = 0.65,          # pin (center-to-center) distance
+        m = 0.0,          # margin between pins and body 
+        ps = 'rounded',          # rounded, square pads
+        npx = 7,           # number of pins along X axis (width)
+        npy = 7,           # number of pins along y axis (length)
+        epad = (4.8, 4.8),       # e Pad
+        excluded_pins = None,          # pin excluded
+        modelName = 'QFN-28-1EP_6x6mm_P0.65mm_EP4.8x4.8mm',            # modelName
+        rotation = -90,      # rotation if required
+        dest_dir_prefix = '../Package_DFN_QFN.3dshapes',      # destination directory
         ),
     'QFN-32-1EP_4x4mm_Pitch0.4mm': Params( # from http://www.onsemi.com/pub/Collateral/485CD.PDF
         c = 0.2,        # pin thickness, body center part height
